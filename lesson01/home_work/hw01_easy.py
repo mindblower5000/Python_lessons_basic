@@ -34,9 +34,9 @@ a = 4
 b = 5
 
 print("a = ", a, ", b = ", b)
-a += b;
-b = a - b;
-a -= b;
+a += b
+b = a - b
+a -= b
 
 print("a = ", a, ", b = ", b)
 
