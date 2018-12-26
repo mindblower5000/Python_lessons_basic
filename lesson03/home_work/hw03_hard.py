@@ -9,6 +9,83 @@
 # Ввод: -2/3 - -2
 # Вывод: 1 1/3
 
+def calc_expression (str):
+
+    fractions = str.split('+')
+
+    if len(fractions) > 1:
+        pass
+    else:
+        fractions = str.split('-')
+
+    print(fractions)
+
+
+
+
+def parse_fraction(fr):
+    fr = fr.strip()
+    nn = fr.split(' ')
+    x = ''
+    y = ''
+    n = ''
+
+    if len(nn) > 1:
+        n = nn[0].strip()
+        xy = nn[1].strip().split('/')
+        if len(xy) > 0:
+            x = xy[0]
+        if len(xy) > 1 :
+            y = xy[1]
+    elif len(nn) == 1:
+        xy = nn[0].strip().split('/')
+        if len(xy) > 0:
+            x = xy[0]
+        if len(xy) > 1 :
+            y = xy[1]
+    else:
+        return 0
+
+    return '', int(x), int(y)
+
+
+def add_fractions(n1, x1, y1, n2, x2, y2):
+    y1 = n1 * y1 + n1 * x1
+    y2 = n2 * y2 + n2 * x2
+
+    temp = x1
+
+    x1 *= v2
+    y1 *= y2
+
+    x2 *= temp
+    y2 *= temp
+
+    x3 = x1 + x2
+    y3 = y1 + y2
+
+    sign3 = 1
+    n3 = 1
+    if x3 < 0:
+        sign3 = -1
+        x3 *= -1
+
+    if x3 >= y3:
+        n3 = x3//y3
+        x3 = x3 - y3 * n3
+
+    n3 *= sign3
+
+    return n3, x3, y3
+
+
+calc_expression('5/6 + 4/7')
+print(parse_fraction('-1/3'))
+add_fractions(1,2,3,4,5,6)
+
+
+
+
 
 # Задание-2:
 # Дана ведомость расчета заработной платы (файл "data/workers").
