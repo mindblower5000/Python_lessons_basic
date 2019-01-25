@@ -139,98 +139,111 @@ import sqlite3
 import datetime
 import pickle
 
-try:
-    socks.set_default_proxy(socks.SOCKS5, "localhost", 9050)
-    socket.socket = socks.socksocket
-    response = requests.get('http://icanhazip.com')
-    print('Our ip is {}'.format(response.text))
-except Exception as e:
-        print("*** Error. No Tor found as service on port 9050!!! Run it to continue...\n", e)
-        print("""
-    Use Expert Bundle version of Tor
-    tor.exe --service install
-    netstat -aon | findstr ":9050"
-        """)
-        exit(-1)
 
 
+json_cities = None  # global cities table
+city_list_file_name = 'city_list.serialized'  # cities local cache file
+appid = None
+db_file = 'open_weather.db'  # Sqllite db
 
 
+# Checking Tor service
+def open_socks():
+    global socks, socket
+    try:
+        socks.set_default_proxy(socks.SOCKS5, "localhost", 9050)
+        socket.socket = socks.socksocket
+        response = requests.get('http://icanhazip.com')
+        print('Our ip is {}'.format(response.text))
+    except Exception as e:
+            print("*** Error. No Tor found as service on port 9050!!! Run it to continue...\n", e)
+            print("""
+        Use Expert Bundle version of Tor
+        tor.exe --service install
+        netstat -aon | findstr ":9050"
+            """)
+            exit(-1)
 
 
-search_city = "Moskva"
-search_country = "RU"
-city_list_file_name = 'city_list.serialized'
+# Load new city db to json_cities or using loaded
+def load_cities():
+    global json_cities
 
-# Load new city db or using loaded
+    if os.path.isfile(city_list_file_name):
+        print('Cities list found.')
+        f = open(city_list_file_name, 'rb')
+        json_cities = pickle.load(f)
+        print('Found {} items'.format(len(json_cities)))
+    else:
+        print('Cities list is not found. Downloading...')
+        open_socks()
+        webf = urllib.request.urlopen('http://bulk.openweathermap.org/sample/city.list.json.gz',)
+        txt = webf.read()
+        print('Done.')
+        print('File len is ', len(txt))
+        j_text = gzip.decompress(txt)
+        json_cities = json.loads(j_text)
+        print('Decompressed {} items'.format(len(json_cities)))
+        with open(city_list_file_name, 'wb') as f:
+            pickle.dump(json_cities, f)
+        print('Saved.')
 
-if os.path.isfile(city_list_file_name):
-    print('Cities list found.')
-    f = open(city_list_file_name, 'rb')
-    json_cities = pickle.load(f)
-    print('Found {} items'.format(len(json_cities)))
-else:
-    print('Cities list is not found. Downloading...')
-    webf = urllib.request.urlopen('http://bulk.openweathermap.org/sample/city.list.json.gz',)
-    txt = webf.read()
-    print('Done.')
-    print('File len is ', len(txt))
-    j_text = gzip.decompress(txt)
-    json_cities = json.loads(j_text)
-    print('Decompressed {} items'.format(len(json_cities)))
-    with open(city_list_file_name, 'wb') as f:
-        pickle.dump(json_cities, f)
-    print('Saved.')
 
-
-# Finding city id by name
-
-city_id = -1   # DEST CITY ID
-for i, city in enumerate(json_cities):
-    if city['name'] == search_city and city['country'] == search_country:
-        print(city)
-        city_id = city['id']
-print('Moscow id is', city_id)
+# Find city id by name
+def get_city_id_by_name(search_city, search_country):
+    city_id = -1   # DEST CITY ID
+    for i, city in enumerate(json_cities):
+        if city['name'] == search_city and city['country'] == search_country:
+            print(city)
+            city_id = city['id']
+    print(search_city, 'id is', city_id)
+    # if city_id == 1:
+    #     raise Exception("Desired city is not found in db!!!")
+    return city_id
 
 
 # Loading appid
-
-appid = '-1'
-with open('app.id', 'r') as f2:
-    appid = f2.read()
-    appid = appid.strip()
-    print('APPID = {}'.format(appid))
-
+def load_appid():
+    global appid
+    appid = '-1'
+    with open('app.id', 'r') as f2:
+        appid = f2.read()
+        appid = appid.strip()
+        print('APPID = {}'.format(appid))
+    return appid
 
 # Getting weather by city id
+def load_weather(city_id):
+    try:
+        open_socks()
+        load_appid()
+        res = requests.get("http://api.openweathermap.org/data/2.5/weather", params={'id': city_id, 'appid': appid, 'units': 'metric'})
+        # res = requests.get("http://api.openweathermap.org/data/2.5/find",
+        # params={'q': s_city, 'type': 'like', 'units': 'metric', 'APPID': appid})
+        data = res.json()
+        if not data["cod"] == 200:
+            print(data["message"])
+        else:
+            print(data)
+    except Exception as e:
+        print("Exception (weather):", e)
+        pass
 
-try:
-    res = requests.get("http://api.openweathermap.org/data/2.5/weather", params = {'id': city_id, 'appid': appid, 'units': 'metric'})
-    # res = requests.get("http://api.openweathermap.org/data/2.5/find",
-    # params={'q': s_city, 'type': 'like', 'units': 'metric', 'APPID': appid})
-    data = res.json()
-    if not data["cod"] == 200:
-        print(data["message"])
-    else:
-        print(data)
-except Exception as e:
-    print("Exception (weather):", e)
-    pass
-#
-# response_example = {'coord': {'lon': 37.61, 'lat': 55.76}, 'weather': [{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}, {'id': 701, 'main': 'Mist', 'description': 'mist', 'icon': '50n'}], 'base': 'stations', 'main': {'temp': -13.61, 'pressure': 1014, 'humidity': 92, 'temp_min': -16, 'temp_max': -11}, 'visibility': 10000, 'wind': {'speed': 4, 'deg': 290}, 'clouds': {'all': 40}, 'dt': 1548347400, 'sys': {'type': 1, 'id': 9027, 'message': 0.004, 'country': 'RU', 'sunrise': 1548308207, 'sunset': 1548337637}, 'id': 524894, 'name': 'Moskva', 'cod': 200}
+    # example
+    # response_example = {'coord': {'lon': 37.61, 'lat': 55.76}, 'weather': [{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}, {'id': 701, 'main': 'Mist', 'description': 'mist', 'icon': '50n'}], 'base': 'stations', 'main': {'temp': -13.61, 'pressure': 1014, 'humidity': 92, 'temp_min': -16, 'temp_max': -11}, 'visibility': 10000, 'wind': {'speed': 4, 'deg': 290}, 'clouds': {'all': 40}, 'dt': 1548347400, 'sys': {'type': 1, 'id': 9027, 'message': 0.004, 'country': 'RU', 'sunrise': 1548308207, 'sunset': 1548337637}, 'id': 524894, 'name': 'Moskva', 'cod': 200}
 
-weather_city_id = data["id"]
-weather_temp = float(data["main"]["temp"])
-weather_conds = str(data["weather"])
-weather_date = datetime.datetime.now().date()
-weather_city_name = data["name"]
-weather_country = data["sys"]["country"]
+    # returning needed data
+    w_data = {}
+    w_data['weather_city_id'] = data["id"]
+    w_data['weather_temp'] = float(data["main"]["temp"])
+    w_data['weather_conds'] = str(data["weather"])
+    w_data['weather_date'] = datetime.datetime.now().date()
+    w_data['weather_city_name'] = data["name"]
+    w_data['weather_country'] = data["sys"]["country"]
 
-print(weather_temp)
-print(weather_date)
-print(weather_conds)
-print(weather_city_name)
-print(weather_country)
+    print(w_data)
+    print('Weather parsed.')
+    return w_data
 
 def db_connection(db_filename):
     conn = sqlite3.connect(db_filename)
@@ -310,33 +323,44 @@ def db_update(conn, wcity, wdate, wtemp, wconds):
         pass
 
 
-def db_update_is_neeeded(conn, city, date):
+def db_pk_data_exists(conn, city, date):
     sel = db_select(conn, city, date)
     if len(sel)>0:
-        print ("Update is needed!")
+        print("db_pk_data_exists :: Found existing records on this date for this city. Can be updated!")
         return True
-    print("Update is not needed!")
     return False
 
-db_file = 'open_weather.db'
+
+
+
+
+
+load_cities()
+city_id = get_city_id_by_name("Moskva", "RU")
+w = load_weather(city_id)
 
 
 # db_delete(db_file)
 c = db_connection(db_file)
 db_create(c)
-db_insert(c, db_prep_data(weather_city_id, weather_date, weather_city_name, weather_country, weather_temp, weather_conds))
 
-s = db_select(c, city_id, str(weather_date))
+
+s = db_select(c, city_id, str(w['weather_date']))
 for data in s:
     print(*data)
 
-if db_update_is_neeeded(c, city_id, str(weather_date)):
-    db_update(c, city_id, str(weather_date), weather_temp, weather_conds)
+# If found update else insert new
+if db_pk_data_exists(c, w['weather_city_id'], str(w['weather_date'])):
+    db_update(c, w['weather_city_id'], str(w['weather_date']), w['weather_temp'], w['weather_conds'])
+else:
+    db_insert(c, db_prep_data(*w.values()))
 
-s = db_select(c, city_id, str(weather_date))
+# Check
+s = db_select(c, w['weather_city_id'], str(w['weather_date']))
 for data in s:
     print(*data)
 
+# Close connection
 db_connection_close(c)
 
 
