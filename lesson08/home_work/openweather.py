@@ -141,11 +141,12 @@ import pickle
 
 
 
+
 json_cities = None  # global cities table
 city_list_file_name = 'city_list.serialized'  # cities local cache file
 appid = None
 db_file = 'open_weather.db'  # Sqllite db
-
+db_names = ['weather_city_id', 'weather_date', 'weather_city_name',  'weather_country', 'weather_temp', 'weather_conds']
 
 # Checking Tor service
 def open_socks():
@@ -191,9 +192,14 @@ def load_cities():
 
 # Find city id by name
 def get_city_id_by_name(search_city, search_country):
+    global json_cities
     city_id = -1   # DEST CITY ID
     for i, city in enumerate(json_cities):
-        if city['name'] == search_city and city['country'] == search_country:
+        if len(search_country) > 0:
+            if city['name'] == search_city and city['country'] == search_country:
+                print(city)
+                city_id = city['id']
+        elif city['name'] == search_city:
             print(city)
             city_id = city['id']
     print(search_city, 'id is', city_id)
@@ -209,7 +215,7 @@ def load_appid():
     with open('app.id', 'r') as f2:
         appid = f2.read()
         appid = appid.strip()
-        print('APPID = {}'.format(appid))
+        print('\nAPPID = {}'.format(appid))
     return appid
 
 # Getting weather by city id
@@ -226,7 +232,7 @@ def load_weather(city_id):
         else:
             print(data)
     except Exception as e:
-        print("Exception (weather):", e)
+        print("\nException (weather):", e)
         pass
 
     # example
@@ -241,8 +247,8 @@ def load_weather(city_id):
     w_data['weather_city_name'] = data["name"]
     w_data['weather_country'] = data["sys"]["country"]
 
-    print(w_data)
-    print('Weather parsed.')
+    print('\n', w_data)
+    print('\nWeather parsed.')
     return w_data
 
 def db_connection(db_filename):
@@ -286,7 +292,7 @@ def db_insert(conn, weather_rows_list):
             )
             conn.commit()
     except Exception as e:
-        print("Exception db_insert :: Not inserted. Such weather_date exists for this weather_city_id!!!")
+        print("\nException db_insert :: Not inserted. Such weather_date exists for this weather_city_id!!!")
         pass
 
 def db_select(conn, check_id, check_date):
@@ -304,7 +310,7 @@ def db_select(conn, check_id, check_date):
             # print('db_select:: ', w_city_id, w_date, w_city_name, w_country, w_temp, w_conds)
         return selected
     except Exception as e:
-        print("Exception db_select:", e)
+        print("\nException db_select:", e)
         pass
 
 
@@ -314,53 +320,59 @@ def db_update(conn, wcity, wdate, wtemp, wconds):
         cur = conn.cursor()
         update_string = "update weather set weather_temp = {wtemp}, weather_conds = \"{wconds}\"  where weather_city_id={wcity} and weather_date=\'{wdate}\'".format_map(
                     {'wcity': wcity,'wdate': wdate,'wtemp': wtemp,'wconds': wconds})
-        print(update_string)
+        # print(update_string)
         cur.execute(update_string)
-        print("db_update:: Updated!!!")
+        print("\ndb_update:: Updated!!!")
         conn.commit()
     except Exception as e:
-        print("Exception db_update::", e)
+        print("\nException db_update::", e)
         pass
 
 
 def db_pk_data_exists(conn, city, date):
     sel = db_select(conn, city, date)
     if len(sel)>0:
-        print("db_pk_data_exists :: Found existing records on this date for this city. Can be updated!")
+        print("\ndb_pk_data_exists :: Found existing records on this date for this city. Can be updated!")
         return True
     return False
 
 
 
+def get_weather_by_city(city, country):
+    global db_names
+    load_cities()
+    city_id = get_city_id_by_name(city, country)
+    w = load_weather(city_id)
+
+    # db_delete(db_file)
+    c = db_connection(db_file)
+    db_create(c)
+
+    s = db_select(c, city_id, str(w['weather_date']))
+    for data in s:
+        print(*data)
+
+    # If found update else insert new
+    if db_pk_data_exists(c, w['weather_city_id'], str(w['weather_date'])):
+        db_update(c, w['weather_city_id'], str(w['weather_date']), w['weather_temp'], w['weather_conds'])
+    else:
+        db_insert(c, db_prep_data(*w.values()))
+
+    # Check
+    # s = db_select(c, w['weather_city_id'], str(w['weather_date']))
+    s = db_select(c, w['weather_city_id'], '')  # unload all from db with no date specially for task !!!
+
+    result = []
+    for record in s:
+        result.append(dict(zip(db_names, record)))
+        # print(*record)
+    # print(result)
+
+    # Close connection
+    db_connection_close(c)
+    return result
 
 
-
-load_cities()
-city_id = get_city_id_by_name("Moskva", "RU")
-w = load_weather(city_id)
-
-
-# db_delete(db_file)
-c = db_connection(db_file)
-db_create(c)
-
-
-s = db_select(c, city_id, str(w['weather_date']))
-for data in s:
-    print(*data)
-
-# If found update else insert new
-if db_pk_data_exists(c, w['weather_city_id'], str(w['weather_date'])):
-    db_update(c, w['weather_city_id'], str(w['weather_date']), w['weather_temp'], w['weather_conds'])
-else:
-    db_insert(c, db_prep_data(*w.values()))
-
-# Check
-s = db_select(c, w['weather_city_id'], str(w['weather_date']))
-for data in s:
-    print(*data)
-
-# Close connection
-db_connection_close(c)
-
+if __name__ == "__main__":
+    get_weather_by_city("Moskva", "RU")
 

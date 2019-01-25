@@ -1,0 +1,12 @@
+weather_city_id,weather_date,weather_city_name,weather_country,weather_temp,weather_conds
+524894,-14.01,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]",2019-01-25,Moskva,RU
+524894,2019-01-25,Moskva,RU,-16.76,"[{'id': 800, 'main': 'Clear', 'description': 'clear sky', 'icon': '01n'}]"
+524894,2019-01-26,Moskva,RU,-12.0,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]"
+524894,2019-01-29,Moskva,RU,-12.0,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]"
+524894,2019-02-03,Moskva,RU,-12.0,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]"
+524894,2019-02-10,Moskva,RU,-12.0,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]"
+524894,2019-02-19,Moskva,RU,-12.0,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]"
+524894,2019-03-02,Moskva,RU,-12.0,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]"
+524894,2019-03-15,Moskva,RU,-12.0,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]"
+524894,2019-03-30,Moskva,RU,-12.0,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]"
+524894,2019-04-16,Moskva,RU,-12.0,"[{'id': 600, 'main': 'Snow', 'description': 'light snow', 'icon': '13n'}]"
